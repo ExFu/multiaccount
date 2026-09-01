@@ -71,3 +71,24 @@ on real accounts (`"all"` still rejected). A third T3 targets this
 milestone: `T3-m3-delete-tools`, built after the first two slices.
 Closure now additionally awaits a delete-smoke leg; the 2026-09-01
 write-smoke evidence stands.
+
+## Closure (2026-09-01, operator ceremony)
+
+Definition of done met and operator-confirmed across two real-account
+smoke legs, both run by a test agent in fresh sessions:
+
+1. Write smoke: drafts (Gmail Drafts folder), calendar events, and
+   Drive objects written across accounts. It surfaced one real bug —
+   non-ASCII draft Subjects mojibaked — fixed same day (RFC 2047
+   encoded-words, commit e7c4736) and merged before closure.
+2. Delete smoke, after the rulings-addendum slice landed: the same
+   objects removed through the new delete tools. Operator verdict:
+   "All worked."
+3. All three accounts re-consented on the M3 scope set via
+   `scripts/reauth.mjs` (operator-paced variant), Docs API enabled.
+
+Three T3 slices, all Codex-delegated, one round each, zero deviations;
+final surface 17 tools, suite 67/67. Known gaps noted at closure as
+inbox items, not defects: Gmail label operations, and send-from/sendAs
+alias selection on drafts for accounts with multiple aliases. M4
+(remote streamable-HTTP transport, ChatGPT) is next.
