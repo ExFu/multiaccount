@@ -91,3 +91,12 @@ these binding principles:
   `gmail.readonly`, `gmail.compose`, `drive` (full — required to edit
   files the app did not create; `drive.file` cannot), `calendar.events`.
   `drive.readonly` and `calendar.readonly` drop out as subsumed.
+- **W6 — deletes are narrowest-destructive (2026-09-01 addendum,
+  operator post-smoke ruling in `M3-writes-live`).** Where a delete
+  tool exists: Drive deletion means *trash* (recoverable; no
+  permanent-delete tool exists), Gmail deletion touches *drafts only*
+  (no code path may call any message delete/trash API — the W2
+  construction, applied to deletion), and calendar deletion never
+  notifies attendees (`sendUpdates: "none"`). W1, W3, and W4 apply to
+  deletes as to all writes; deletes always carry
+  `destructiveHint: true`.

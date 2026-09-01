@@ -49,3 +49,25 @@ Operator scoping rulings, recorded from this session's Q&A:
 
 Accepted by operator (al) under the 2026-09-01 session carte-blanche
 grant. Target-selection: M3 is the target milestone on acceptance.
+
+## Rulings addendum (2026-09-01, operator, post-smoke)
+
+The operator's real-account smoke passed (drafts, calendar events, and
+Drive files written by a test agent), but cleanup had to happen outside
+this server — and the operator ruled: **delete tools are wanted after
+all** ("it's so irritating when tools don't have that"). This supersedes
+the earlier "no delete tool" scoping ruling above. Scope of the
+reversal, narrowest-destructive (see `T2-core-server` §5 W6):
+
+- `drive_trash_file` — moves a file to Drive trash (recoverable);
+  permanent deletion stays out.
+- `calendar_delete_event` — removes an event from the primary calendar;
+  never emails attendees.
+- `gmail_delete_draft` — deletes a **draft** only; message deletion
+  stays out entirely.
+
+Definition of done gains item 6: the three delete tools work per-alias
+on real accounts (`"all"` still rejected). A third T3 targets this
+milestone: `T3-m3-delete-tools`, built after the first two slices.
+Closure now additionally awaits a delete-smoke leg; the 2026-09-01
+write-smoke evidence stands.
