@@ -1,9 +1,9 @@
 # exfu-multiaccount
 
 `exfu-multiaccount` is a local MCP server that gives an AI assistant explicit,
-read-only access to more than one Gmail account. Each account has a human alias;
-credentials remain in a separate local token file and are never returned by a
-tool.
+read-only access to Gmail, Google Drive, and Google Calendar across more than
+one Google account. Each account has a human alias; credentials remain in a
+separate local token file and are never returned by a tool.
 
 ## Install and build
 
@@ -17,14 +17,13 @@ npm run build
 ## Create a Google OAuth client
 
 1. Open the Google Cloud Console and select or create a project.
-2. Enable the Gmail API.
+2. Enable the Gmail, Google Drive, and Google Calendar APIs.
 3. Configure the OAuth consent screen for your use.
 4. Create an OAuth client ID with application type **Desktop app**.
 5. Download the client-secret JSON file to a private local location.
 
-The server requests only
-`https://www.googleapis.com/auth/gmail.readonly`. It cannot send, delete, or
-modify mail.
+The server requests only the read-only Gmail, Drive, and Calendar scopes. It
+cannot send, delete, or modify mail, files, or calendar events.
 
 ## Configure
 
@@ -57,6 +56,15 @@ node dist/cli.js remove-account work
 Removing an account deletes its registry entry and local token file. It does
 not revoke the OAuth grant at Google.
 
+Existing accounts must re-consent before Drive and Calendar tools can use the
+new scopes. Rebuild, then re-authorize all accounts or one alias at a time:
+
+```sh
+npm run build
+node scripts/reauth.mjs
+node scripts/reauth.mjs personal
+```
+
 ## Claude Code MCP configuration
 
 After building, add this server to your Claude Code MCP configuration:
@@ -74,7 +82,15 @@ After building, add this server to your Claude Code MCP configuration:
 }
 ```
 
-Restart Claude Code, then use `accounts_list`, `accounts_add`, `gmail_search`,
-and `gmail_get_message`. Every Gmail tool requires an `account` alias; use
-`"all"` to fan out across configured accounts. Results and per-account errors
-are tagged with the source alias.
+Restart Claude Code, then use these tools:
+
+- `accounts_list` and `accounts_add` manage account metadata and authorization.
+- `gmail_search` and `gmail_get_message` search and read Gmail.
+- `drive_search` searches Drive using Google Drive query syntax.
+- `drive_read_file` reads text files and exports Docs, Sheets, and Slides to
+  text formats; binary files are not downloaded.
+- `calendar_events` lists events from the account's primary calendar.
+
+Every Gmail, Drive, and Calendar tool requires an `account` alias; use `"all"`
+to fan out across configured accounts. Results and per-account errors are tagged
+with the source alias.

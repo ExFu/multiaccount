@@ -105,6 +105,19 @@ export async function addAccount(account: Account): Promise<Account> {
   return account;
 }
 
+export async function updateAccountScopes(alias: string, scopes: string[]): Promise<void> {
+  validateAlias(alias);
+  const accounts = await loadAccounts();
+  if (!accounts.some((account) => account.alias === alias)) {
+    return;
+  }
+  await saveAccounts(
+    accounts.map((account) =>
+      account.alias === alias ? { ...account, scopes: [...scopes] } : account,
+    ),
+  );
+}
+
 export async function removeAccount(alias: string): Promise<boolean> {
   validateAlias(alias);
   const accounts = await loadAccounts();

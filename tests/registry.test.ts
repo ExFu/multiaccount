@@ -6,6 +6,7 @@ import {
   addAccount,
   loadAccounts,
   saveAccounts,
+  updateAccountScopes,
   validateAlias,
   type Account,
 } from "../src/accounts/registry.js";
@@ -60,5 +61,31 @@ describe("account registry", () => {
     const raw = await readFile(join(home, "accounts.json"), "utf8");
     expect(raw).not.toMatch(/access_token|refresh_token|client_secret/);
     expect(JSON.parse(raw)).toEqual([account()]);
+  });
+
+  it("updates account scopes and persists them", async () => {
+    await saveAccounts([account("work")]);
+    const scopes = [
+      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/drive.readonly",
+      "https://www.googleapis.com/auth/calendar.readonly",
+    ];
+
+    await updateAccountScopes("work", scopes);
+
+    expect((await loadAccounts())[0]?.scopes).toEqual(scopes);
+    expect(JSON.parse(await readFile(join(home, "accounts.json"), "utf8"))[0].scopes).toEqual(
+      scopes,
+    );
+  });
+
+  it("does nothing when updating scopes for an account not yet registered", async () => {
+    await updateAccountScopes("first-time", [
+      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/drive.readonly",
+      "https://www.googleapis.com/auth/calendar.readonly",
+    ]);
+
+    expect(await loadAccounts()).toEqual([]);
   });
 });

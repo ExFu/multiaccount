@@ -4,10 +4,15 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { google, type Auth } from "googleapis";
 import open from "open";
+import { updateAccountScopes } from "../../accounts/registry.js";
 import { FileTokenStore, type StoredTokens, type TokenStore } from "../../accounts/tokens.js";
 import { loadConfig, type ExfuConfig } from "../../config.js";
 
-export const GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+export const GOOGLE_SCOPES = [
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/drive.readonly",
+  "https://www.googleapis.com/auth/calendar.readonly",
+];
 
 interface ClientDefinition {
   client_id?: string;
@@ -105,7 +110,7 @@ export async function authorizeGoogleAccount(
   const authorizationUrl = client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
-    scope: [GMAIL_READONLY_SCOPE],
+    scope: GOOGLE_SCOPES,
     state,
   });
 
@@ -123,6 +128,7 @@ export async function authorizeGoogleAccount(
       throw new Error("Google did not return a refresh token. Revoke access and run add-account again.");
     }
     await tokenStore.set(alias, tokens as StoredTokens);
+    await updateAccountScopes(alias, GOOGLE_SCOPES);
     client.setCredentials(tokens);
     attachTokenPersistence(client, alias, tokens as StoredTokens, tokenStore);
     return client;

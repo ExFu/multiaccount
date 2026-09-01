@@ -11,8 +11,19 @@ import { loadConfig } from "./config.js";
 import {
   authorizeGoogleAccount,
   getAuthedClient,
-  GMAIL_READONLY_SCOPE,
+  GOOGLE_SCOPES,
 } from "./providers/google/auth.js";
+import {
+  listEvents,
+  type CalendarEvent,
+  type CalendarEventOptions,
+} from "./providers/google/calendar.js";
+import {
+  readFile,
+  searchFiles,
+  type DriveFile,
+  type DriveSearchResult,
+} from "./providers/google/drive.js";
 import {
   getMessage,
   getProfileEmail,
@@ -28,6 +39,16 @@ export interface AccountError {
 
 export type TaggedSearchResult = GmailSearchResult & { account: string };
 export type TaggedMessage = GmailMessage & { account: string };
+export type TaggedDriveSearchResult = DriveSearchResult & { account: string };
+export type TaggedDriveFile = DriveFile & { account: string };
+export type TaggedCalendarEvent = CalendarEvent & { account: string };
+
+export interface CalendarEventsOptions {
+  timeMin?: string;
+  timeMax?: string;
+  query?: string;
+  maxResults?: number;
+}
 
 export async function accountsList(): Promise<Account[]> {
   return loadAccounts();
@@ -48,7 +69,7 @@ export async function accountsAdd(alias: string, extraInfo?: string): Promise<Ac
       alias,
       provider: "google",
       email,
-      scopes: [GMAIL_READONLY_SCOPE],
+      scopes: [...GOOGLE_SCOPES],
       ...(extraInfo?.trim() ? { extraInfo: extraInfo.trim() } : {}),
       addedAt: new Date().toISOString(),
     });
@@ -84,7 +105,7 @@ function safeAccountError(error: unknown, alias: string): AccountError {
     account: alias,
     error: needsAuthorization
       ? `Account "${alias}" needs re-authorization. Run add-account ${alias}.`
-      : `Gmail request failed for account "${alias}".`,
+      : `Request failed for account "${alias}".`,
   };
 }
 
@@ -131,4 +152,65 @@ export async function gmailGetMessage(
       }
     }),
   );
+}
+
+export async function driveSearch(
+  account: string,
+  query: string,
+  maxResults = 10,
+): Promise<Array<TaggedDriveSearchResult | AccountError>> {
+  const accounts = await selectedAccounts(account);
+  const results = await Promise.all(
+    accounts.map(async ({ alias }) => {
+      try {
+        const client = await getAuthedClient(alias);
+        const files = await searchFiles(client, query, maxResults);
+        return files.map((file): TaggedDriveSearchResult => ({ account: alias, ...file }));
+      } catch (error) {
+        return [safeAccountError(error, alias)];
+      }
+    }),
+  );
+  return results.flat();
+}
+
+export async function driveReadFile(
+  account: string,
+  fileId: string,
+): Promise<Array<TaggedDriveFile | AccountError>> {
+  const accounts = await selectedAccounts(account);
+  return Promise.all(
+    accounts.map(async ({ alias }) => {
+      try {
+        const client = await getAuthedClient(alias);
+        const file = await readFile(client, fileId);
+        return { account: alias, ...file } as TaggedDriveFile;
+      } catch (error) {
+        return safeAccountError(error, alias);
+      }
+    }),
+  );
+}
+
+export async function calendarEvents(
+  account: string,
+  options: CalendarEventsOptions = {},
+): Promise<Array<TaggedCalendarEvent | AccountError>> {
+  const accounts = await selectedAccounts(account);
+  const eventOptions: CalendarEventOptions = {
+    ...options,
+    maxResults: options.maxResults ?? 25,
+  };
+  const results = await Promise.all(
+    accounts.map(async ({ alias }) => {
+      try {
+        const client = await getAuthedClient(alias);
+        const events = await listEvents(client, eventOptions);
+        return events.map((event): TaggedCalendarEvent => ({ account: alias, ...event }));
+      } catch (error) {
+        return [safeAccountError(error, alias)];
+      }
+    }),
+  );
+  return results.flat();
 }

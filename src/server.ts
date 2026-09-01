@@ -4,6 +4,9 @@ import { z } from "zod";
 import {
   accountsAdd,
   accountsList,
+  calendarEvents,
+  driveReadFile,
+  driveSearch,
   gmailGetMessage,
   gmailSearch,
 } from "./tools.js";
@@ -67,6 +70,51 @@ export function createServer(): McpServer {
     },
     async ({ account, messageId }) =>
       toolResult(await gmailGetMessage(account, messageId)),
+  );
+
+  server.registerTool(
+    "drive_search",
+    {
+      title: "Search Google Drive",
+      description: "Search one Google Drive account by alias, or all configured accounts.",
+      inputSchema: {
+        account: z.string().describe('Account alias or "all"'),
+        query: z.string().describe("Google Drive query using Drive search syntax"),
+        maxResults: z.number().int().min(1).max(1000).default(10),
+      },
+    },
+    async ({ account, query, maxResults }) =>
+      toolResult(await driveSearch(account, query, maxResults)),
+  );
+
+  server.registerTool(
+    "drive_read_file",
+    {
+      title: "Read Google Drive file",
+      description: "Read a text or Google-native Drive file from one account, or try all accounts.",
+      inputSchema: {
+        account: z.string().describe('Account alias or "all"'),
+        fileId: z.string().min(1).describe("Google Drive file ID"),
+      },
+    },
+    async ({ account, fileId }) => toolResult(await driveReadFile(account, fileId)),
+  );
+
+  server.registerTool(
+    "calendar_events",
+    {
+      title: "List Google Calendar events",
+      description: "List events from one primary Google Calendar, or all configured accounts.",
+      inputSchema: {
+        account: z.string().describe('Account alias or "all"'),
+        timeMin: z.string().datetime({ offset: true }).optional().describe("ISO-8601 lower bound"),
+        timeMax: z.string().datetime({ offset: true }).optional().describe("ISO-8601 upper bound"),
+        query: z.string().optional().describe("Free-text event search query"),
+        maxResults: z.number().int().min(1).max(2500).default(25),
+      },
+    },
+    async ({ account, timeMin, timeMax, query, maxResults }) =>
+      toolResult(await calendarEvents(account, { timeMin, timeMax, query, maxResults })),
   );
 
   return server;
