@@ -4,6 +4,7 @@
 // Usage:
 //   node scripts/reauth.mjs            # all accounts, one browser flow each
 //   node scripts/reauth.mjs <alias>    # just that account
+import { createInterface } from "node:readline/promises";
 import { loadAccounts } from "../dist/accounts/registry.js";
 import { createTokenStore } from "../dist/accounts/storeFactory.js";
 import { authorizeGoogleAccount } from "../dist/providers/google/auth.js";
@@ -26,10 +27,21 @@ if (!selected.length) {
 }
 
 const tokenStore = createTokenStore();
+// The auth page opens in whichever browser profile is frontmost, so wait
+// for the operator to switch profiles before each account's flow starts.
+const prompt = process.stdin.isTTY
+  ? createInterface({ input: process.stdin, output: process.stdout })
+  : null;
 let failures = 0;
 
 for (const { alias, email } of selected) {
-  console.log(`\nRe-authorizing "${alias}" — sign in as ${email} in the browser...`);
+  if (prompt) {
+    await prompt.question(
+      `\nNext up: "${alias}" (${email}). Switch to that account's browser profile, ` +
+        "then press Enter to open its auth page...",
+    );
+  }
+  console.log(`Re-authorizing "${alias}" — sign in as ${email} in the browser...`);
   try {
     const client = await authorizeGoogleAccount(alias);
     const actual = await getProfileEmail(client);
@@ -46,6 +58,8 @@ for (const { alias, email } of selected) {
     console.error(`  FAILED: ${error instanceof Error ? error.message : error}`);
   }
 }
+
+prompt?.close();
 
 if (failures) {
   console.error(`\n${failures} account(s) failed — re-run for those aliases.`);
