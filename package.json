@@ -1,0 +1,24 @@
+{
+  "name": "exfu-multiaccount",
+  "version": "0.1.0",
+  "description": "A local, read-only multi-account Gmail MCP server",
+  "type": "module",
+  "bin": {
+    "exfu-multiaccount": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "googleapis": "^137.1.0",
+    "open": "^10.2.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9"
+  }
+}
