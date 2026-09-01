@@ -57,7 +57,11 @@ export async function accountsAdd(alias: string, extraInfo?: string): Promise<Ac
     if (error instanceof Error && error.message.startsWith("Google did not return")) {
       throw error;
     }
-    throw new Error("Could not verify the authorized Google account. Run add-account again.");
+    const cause = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Could not verify the authorized Google account: ${cause} ` +
+        `(stored tokens for "${alias}" were removed; fix the cause and run add-account again)`,
+    );
   }
 }
 
