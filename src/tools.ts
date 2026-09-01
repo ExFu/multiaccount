@@ -34,6 +34,12 @@ import {
   type UpdatedDriveFile,
 } from "./providers/google/drive.js";
 import {
+  appendText,
+  replaceText,
+  type EditedDocument,
+  type ReplacedDocument,
+} from "./providers/google/docs.js";
+import {
   createDraft,
   getMessage,
   getProfileEmail,
@@ -267,6 +273,46 @@ export async function driveUpdateFile(
       account: registryAccount.alias,
       accountEmail: registryAccount.email,
       ...file,
+    };
+  } catch (error) {
+    throw new Error(safeAccountError(error, registryAccount.alias).error);
+  }
+}
+
+export async function docsAppendText(
+  account: string,
+  documentId: string,
+  text: string,
+): Promise<WriteReceipt<EditedDocument>> {
+  const registryAccount = await requireWritableAccount(account);
+  try {
+    const client = await getAuthedClient(registryAccount.alias);
+    const document = await appendText(client, documentId, text);
+    return {
+      account: registryAccount.alias,
+      accountEmail: registryAccount.email,
+      ...document,
+    };
+  } catch (error) {
+    throw new Error(safeAccountError(error, registryAccount.alias).error);
+  }
+}
+
+export async function docsReplaceText(
+  account: string,
+  documentId: string,
+  find: string,
+  replaceWith: string,
+  matchCase = true,
+): Promise<WriteReceipt<ReplacedDocument>> {
+  const registryAccount = await requireWritableAccount(account);
+  try {
+    const client = await getAuthedClient(registryAccount.alias);
+    const document = await replaceText(client, documentId, find, replaceWith, matchCase);
+    return {
+      account: registryAccount.alias,
+      accountEmail: registryAccount.email,
+      ...document,
     };
   } catch (error) {
     throw new Error(safeAccountError(error, registryAccount.alias).error);

@@ -11,6 +11,8 @@ import {
   driveReadFile,
   driveSearch,
   driveUpdateFile,
+  docsAppendText,
+  docsReplaceText,
   gmailCreateDraft,
   gmailGetMessage,
   gmailSearch,
@@ -158,6 +160,42 @@ export function createServer(): McpServer {
     },
     async ({ account, fileId, content, contentMimeType }) =>
       toolResult(await driveUpdateFile(account, fileId, content, contentMimeType)),
+  );
+
+  server.registerTool(
+    "docs_append_text",
+    {
+      title: "Append text to Google Doc",
+      description: 'Append text to a Google Doc. The target must be a Google Doc. Requires one explicit account alias; "all" is rejected.',
+      inputSchema: {
+        account: z.string().describe("Account alias"),
+        documentId: z.string().min(1).describe("Google Docs document ID"),
+        text: z.string().describe("Text to append"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    async ({ account, documentId, text }) =>
+      toolResult(await docsAppendText(account, documentId, text)),
+  );
+
+  server.registerTool(
+    "docs_replace_text",
+    {
+      title: "Replace text in Google Doc",
+      description: 'Replace matching text in a Google Doc. The target must be a Google Doc. Requires one explicit account alias; "all" is rejected.',
+      inputSchema: {
+        account: z.string().describe("Account alias"),
+        documentId: z.string().min(1).describe("Google Docs document ID"),
+        find: z.string().describe("Text to find"),
+        replaceWith: z.string().describe("Replacement text"),
+        matchCase: z.boolean().default(true).describe("Whether matching is case-sensitive"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true },
+    },
+    async ({ account, documentId, find, replaceWith, matchCase }) =>
+      toolResult(
+        await docsReplaceText(account, documentId, find, replaceWith, matchCase),
+      ),
   );
 
   server.registerTool(

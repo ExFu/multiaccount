@@ -119,9 +119,14 @@ accounts. Results and per-account errors are tagged with the source alias.
   Google Doc.
 - `drive_update_file` replaces the content of a Google Doc or text file; Sheets,
   Slides, and binary files are rejected.
+- `docs_append_text` appends text to the end of a Google Doc.
+- `docs_replace_text` replaces matching text in a Google Doc, with
+  case-sensitive matching by default.
 - `calendar_create_event` creates an event without emailing attendees.
 - `calendar_update_event` updates an event without emailing attendees.
 - `gmail_create_draft` saves a new or threaded-reply draft and never sends it.
 
 Every write tool requires one explicit `account` alias. `"all"` is rejected,
 and each successful result includes the acting alias and account email.
+The Docs edit tools act only on Google Docs and require no additional consent
+beyond the scope set used by the other write tools.
