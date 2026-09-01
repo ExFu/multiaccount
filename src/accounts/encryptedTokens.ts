@@ -86,7 +86,7 @@ export class EncryptedFileTokenStore implements TokenStore {
   }
 
   async set(alias: string, tokens: StoredTokens): Promise<void> {
-    const { encrypted: path } = await this.tokenPaths(alias);
+    const { encrypted: path, plaintext } = await this.tokenPaths(alias);
     const key = await this.key();
     const iv = randomBytes(IV_LENGTH);
     const cipher = createCipheriv("aes-256-gcm", key, iv);
@@ -101,6 +101,7 @@ export class EncryptedFileTokenStore implements TokenStore {
     await chmod(temporaryPath, 0o600);
     await rename(temporaryPath, path);
     await chmod(path, 0o600);
+    await rm(plaintext, { force: true });
   }
 
   async delete(alias: string): Promise<void> {

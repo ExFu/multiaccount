@@ -70,3 +70,17 @@ describe("createTokenStore", () => {
     expect(createTokenStore()).toBeInstanceOf(FileTokenStore);
   });
 });
+
+describe("set() plaintext hygiene", () => {
+  it("removes a stale plaintext token file when writing encrypted tokens", async () => {
+    const { writeFile } = await import("node:fs/promises");
+    const { access } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    const { resolveHome } = await import("../src/config.js");
+    const plaintextPath = join(await resolveHome(), "tokens", "stale.json");
+    await writeFile(plaintextPath, JSON.stringify({ refresh_token: "old" }), { mode: 0o600 });
+    await store.set("stale", { refresh_token: "new" });
+    await expect(access(plaintextPath)).rejects.toThrow();
+    expect(await store.get("stale")).toEqual({ refresh_token: "new" });
+  });
+});
