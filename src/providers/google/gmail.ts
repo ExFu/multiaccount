@@ -191,6 +191,31 @@ export async function getProfileEmail(client: Auth.OAuth2Client): Promise<string
   return response.data.emailAddress;
 }
 
+// RFC 5322 headers are ASCII-only; non-ASCII values must be RFC 2047 encoded-words.
+function encodeHeaderValue(value: string): string {
+  if (/^[\x20-\x7e]*$/.test(value)) {
+    return value;
+  }
+  return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
+}
+
+function encodeAddress(address: string): string {
+  const match = /^(.*?)(<[^<>]*>)$/.exec(address.trim());
+  if (!match) {
+    return address;
+  }
+  const [, name, angleAddr] = match;
+  const displayName = name.trim();
+  if (!displayName) {
+    return address;
+  }
+  return `${encodeHeaderValue(displayName)} ${angleAddr}`;
+}
+
+function addressList(addresses: string[]): string {
+  return addresses.map(encodeAddress).join(", ");
+}
+
 export async function createDraft(
   client: Auth.OAuth2Client,
   input: GmailDraftInput,
@@ -231,10 +256,10 @@ export async function createDraft(
   }
 
   const message = [
-    `To: ${to.join(", ")}`,
-    ...(input.cc?.length ? [`Cc: ${input.cc.join(", ")}`] : []),
-    ...(input.bcc?.length ? [`Bcc: ${input.bcc.join(", ")}`] : []),
-    `Subject: ${subject}`,
+    `To: ${addressList(to)}`,
+    ...(input.cc?.length ? [`Cc: ${addressList(input.cc)}`] : []),
+    ...(input.bcc?.length ? [`Bcc: ${addressList(input.bcc)}`] : []),
+    `Subject: ${encodeHeaderValue(subject)}`,
     ...(replyMessageId ? [`In-Reply-To: ${replyMessageId}`, `References: ${replyMessageId}`] : []),
     "MIME-Version: 1.0",
     "Content-Type: text/plain; charset=UTF-8",

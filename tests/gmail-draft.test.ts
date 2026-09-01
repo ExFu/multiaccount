@@ -94,6 +94,54 @@ describe("Gmail drafts", () => {
     );
   });
 
+  it("RFC 2047-encodes a non-ASCII subject and round-trips it", async () => {
+    draftsCreate.mockResolvedValue({
+      data: { id: "draft-3", message: { id: "message-3" } },
+    });
+
+    const subject = "MCP multiaccount smoke test — whaleybear → gmail";
+    await expect(
+      createDraft(client, { to: ["one@example.com"], subject, body: "Body" }),
+    ).resolves.toMatchObject({ subject });
+
+    const raw = Buffer.from(createdRequest().requestBody.message.raw, "base64url").toString("utf8");
+    const subjectLine = raw
+      .split("\r\n")
+      .find((line) => line.startsWith("Subject: "));
+    expect(subjectLine).toBeDefined();
+    expect(subjectLine).toMatch(/^Subject: =\?UTF-8\?B\?[A-Za-z0-9+/=]+\?=$/);
+    // eslint-disable-next-line no-control-regex
+    expect(subjectLine).toMatch(/^[\x00-\x7f]*$/);
+    const encoded = /^Subject: =\?UTF-8\?B\?([A-Za-z0-9+/=]+)\?=$/.exec(subjectLine ?? "")?.[1];
+    expect(Buffer.from(encoded ?? "", "base64").toString("utf8")).toBe(subject);
+  });
+
+  it("RFC 2047-encodes non-ASCII display names in recipient headers", async () => {
+    draftsCreate.mockResolvedValue({
+      data: { id: "draft-4", message: { id: "message-4" } },
+    });
+
+    await expect(
+      createDraft(client, {
+        to: ["Zoë Brontë <zoe@example.com>"],
+        cc: ["plain@example.com"],
+        subject: "Plain subject",
+        body: "Body",
+      }),
+    ).resolves.toMatchObject({ subject: "Plain subject" });
+
+    const raw = Buffer.from(createdRequest().requestBody.message.raw, "base64url").toString("utf8");
+    const [headerBlock] = raw.split("\r\n\r\n");
+    // eslint-disable-next-line no-control-regex
+    expect(headerBlock).toMatch(/^[\x00-\x7f]*$/);
+    const toLine = raw.split("\r\n").find((line) => line.startsWith("To: "));
+    expect(toLine).toBe(
+      `To: =?UTF-8?B?${Buffer.from("Zoë Brontë", "utf8").toString("base64")}?= <zoe@example.com>`,
+    );
+    expect(raw).toContain("Cc: plain@example.com\r\n");
+    expect(raw).toContain("Subject: Plain subject\r\n");
+  });
+
   it("builds a threaded reply with derived recipient and subject", async () => {
     messagesGet.mockResolvedValue({
       data: {
