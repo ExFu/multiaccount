@@ -37,8 +37,19 @@ directory:
 }
 ```
 
-Account metadata is stored in `accounts.json`. Each account's credentials are
-stored separately as `tokens/<alias>.json` with file mode `0600`.
+Account metadata is stored in `accounts.json`.
+
+## Token security
+
+On macOS, each account's credentials are encrypted at
+`tokens/<alias>.json.enc` with file mode `0600`. The AES-256-GCM encryption key
+is stored in macOS Keychain under service `exfu-multiaccount` and account
+`token-key`; the key is never written to disk. Existing plaintext token files
+are encrypted and removed when first read.
+
+On non-macOS platforms, credentials use `tokens/<alias>.json` with mode `0600`.
+Set `EXFU_MULTIACCOUNT_PLAIN_TOKENS=1` to use that plaintext store on macOS as
+an explicit compatibility escape hatch.
 
 ## Add and manage accounts
 

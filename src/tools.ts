@@ -6,7 +6,7 @@ import {
   validateAlias,
   type Account,
 } from "./accounts/registry.js";
-import { FileTokenStore } from "./accounts/tokens.js";
+import { createTokenStore } from "./accounts/storeFactory.js";
 import { loadConfig } from "./config.js";
 import {
   authorizeGoogleAccount,
@@ -61,7 +61,7 @@ export async function accountsAdd(alias: string, extraInfo?: string): Promise<Ac
   }
 
   const config = await loadConfig();
-  const tokenStore = new FileTokenStore();
+  const tokenStore = createTokenStore();
   const client = await authorizeGoogleAccount(alias, config, tokenStore);
   try {
     const email = await getProfileEmail(client);
@@ -89,7 +89,7 @@ export async function accountsAdd(alias: string, extraInfo?: string): Promise<Ac
 export async function accountsRemove(alias: string): Promise<boolean> {
   validateAlias(alias);
   const removed = await removeAccount(alias);
-  await new FileTokenStore().delete(alias);
+  await createTokenStore().delete(alias);
   return removed;
 }
 

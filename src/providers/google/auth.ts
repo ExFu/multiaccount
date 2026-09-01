@@ -5,7 +5,8 @@ import type { AddressInfo } from "node:net";
 import { google, type Auth } from "googleapis";
 import open from "open";
 import { updateAccountScopes } from "../../accounts/registry.js";
-import { FileTokenStore, type StoredTokens, type TokenStore } from "../../accounts/tokens.js";
+import { createTokenStore } from "../../accounts/storeFactory.js";
+import type { StoredTokens, TokenStore } from "../../accounts/tokens.js";
 import { loadConfig, type ExfuConfig } from "../../config.js";
 
 export const GOOGLE_SCOPES = [
@@ -59,7 +60,7 @@ function credentials(tokens: StoredTokens): Auth.Credentials {
 export async function authorizeGoogleAccount(
   alias: string,
   config?: ExfuConfig,
-  tokenStore: TokenStore = new FileTokenStore(),
+  tokenStore: TokenStore = createTokenStore(),
 ): Promise<Auth.OAuth2Client> {
   const activeConfig = config ?? (await loadConfig());
   const definition = await readClientDefinition(activeConfig.googleClientSecretPath);
@@ -141,7 +142,7 @@ export async function authorizeGoogleAccount(
 export async function getAuthedClient(
   alias: string,
   config?: ExfuConfig,
-  tokenStore: TokenStore = new FileTokenStore(),
+  tokenStore: TokenStore = createTokenStore(),
 ): Promise<Auth.OAuth2Client> {
   const activeConfig = config ?? (await loadConfig());
   const definition = await readClientDefinition(activeConfig.googleClientSecretPath);
