@@ -31,3 +31,18 @@ Spawned from `T1-top-level` (success criterion 2, first half).
 
 Accepted by operator (al) under the 2026-09-01 session carte-blanche grant.
 Target-selection: M2 is the target milestone once this plan is accepted.
+
+## Closure (2026-09-01, operator ceremony)
+
+Definition of done met and operator-confirmed:
+1. Drive and Calendar APIs enabled; all three accounts re-consented with
+   the expanded read-only scopes via scripts/reauth.mjs.
+2. Operator confirmed drive/calendar tools working across accounts in a
+   fresh Claude Code session.
+3. Token storage verified encrypted-only on disk: tokens/ holds exactly
+   three .json.enc files (0600), no plaintext; Keychain item
+   exfu-multiaccount/token-key present.
+4. Re-consent flow exercised end-to-end as part of this smoke.
+
+Both T3 slices were Codex-delegated, one round each, zero deviations.
+M3 (remote streamable-HTTP transport, ChatGPT) is next.
