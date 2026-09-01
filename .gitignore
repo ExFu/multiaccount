@@ -31,3 +31,9 @@ client_secret*.json
 credentials.json
 .credentials
 token_cache/
+# agent-plan-visualiser local per-checkout state — never tracked
+.apv/.last-capture
+# agent-plan-visualiser local per-checkout state — never tracked
+.apv/.pending-extract
+# agent-plan-visualiser local per-checkout state — never tracked
+.apv/.toolchain-home
