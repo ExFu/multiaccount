@@ -15,22 +15,26 @@ import {
 } from "./providers/google/auth.js";
 import {
   createEvent,
+  deleteEvent,
   listEvents,
   updateEvent,
   type CalendarEvent,
   type CalendarEventInput,
   type CalendarEventOptions,
   type CalendarEventPatch,
+  type DeletedCalendarEvent,
 } from "./providers/google/calendar.js";
 import {
   createFile,
   readFile,
   searchFiles,
+  trashFile,
   updateFileContent,
   type CreateFileOptions,
   type CreatedDriveFile,
   type DriveFile,
   type DriveSearchResult,
+  type TrashedDriveFile,
   type UpdatedDriveFile,
 } from "./providers/google/drive.js";
 import {
@@ -41,9 +45,11 @@ import {
 } from "./providers/google/docs.js";
 import {
   createDraft,
+  deleteDraft,
   getMessage,
   getProfileEmail,
   searchMessages,
+  type DeletedGmailDraft,
   type GmailDraft,
   type GmailDraftInput,
   type GmailMessage,
@@ -364,6 +370,60 @@ export async function gmailCreateDraft(
   try {
     const client = await getAuthedClient(registryAccount.alias);
     const draft = await createDraft(client, input);
+    return {
+      account: registryAccount.alias,
+      accountEmail: registryAccount.email,
+      ...draft,
+    };
+  } catch (error) {
+    throw new Error(safeAccountError(error, registryAccount.alias).error);
+  }
+}
+
+export async function driveTrashFile(
+  account: string,
+  fileId: string,
+): Promise<WriteReceipt<TrashedDriveFile>> {
+  const registryAccount = await requireWritableAccount(account);
+  try {
+    const client = await getAuthedClient(registryAccount.alias);
+    const file = await trashFile(client, fileId);
+    return {
+      account: registryAccount.alias,
+      accountEmail: registryAccount.email,
+      ...file,
+    };
+  } catch (error) {
+    throw new Error(safeAccountError(error, registryAccount.alias).error);
+  }
+}
+
+export async function calendarDeleteEvent(
+  account: string,
+  eventId: string,
+): Promise<WriteReceipt<DeletedCalendarEvent>> {
+  const registryAccount = await requireWritableAccount(account);
+  try {
+    const client = await getAuthedClient(registryAccount.alias);
+    const event = await deleteEvent(client, eventId);
+    return {
+      account: registryAccount.alias,
+      accountEmail: registryAccount.email,
+      ...event,
+    };
+  } catch (error) {
+    throw new Error(safeAccountError(error, registryAccount.alias).error);
+  }
+}
+
+export async function gmailDeleteDraft(
+  account: string,
+  draftId: string,
+): Promise<WriteReceipt<DeletedGmailDraft>> {
+  const registryAccount = await requireWritableAccount(account);
+  try {
+    const client = await getAuthedClient(registryAccount.alias);
+    const draft = await deleteDraft(client, draftId);
     return {
       account: registryAccount.alias,
       accountEmail: registryAccount.email,

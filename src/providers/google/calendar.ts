@@ -39,6 +39,11 @@ export interface CalendarEventPatch {
   attendees?: string[];
 }
 
+export interface DeletedCalendarEvent {
+  eventId: string;
+  deleted: true;
+}
+
 function calendarClient(client: Auth.OAuth2Client): calendar_v3.Calendar {
   return google.calendar({ version: "v3", auth: client });
 }
@@ -124,4 +129,16 @@ export async function updateEvent(
     },
   });
   return mappedEvent(response.data);
+}
+
+export async function deleteEvent(
+  client: Auth.OAuth2Client,
+  eventId: string,
+): Promise<DeletedCalendarEvent> {
+  await calendarClient(client).events.delete({
+    calendarId: "primary",
+    eventId,
+    sendUpdates: "none",
+  });
+  return { eventId, deleted: true };
 }

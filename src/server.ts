@@ -5,15 +5,18 @@ import {
   accountsAdd,
   accountsList,
   calendarCreateEvent,
+  calendarDeleteEvent,
   calendarEvents,
   calendarUpdateEvent,
   driveCreateFile,
   driveReadFile,
   driveSearch,
+  driveTrashFile,
   driveUpdateFile,
   docsAppendText,
   docsReplaceText,
   gmailCreateDraft,
+  gmailDeleteDraft,
   gmailGetMessage,
   gmailSearch,
 } from "./tools.js";
@@ -281,6 +284,48 @@ export function createServer(): McpServer {
       toolResult(
         await gmailCreateDraft(account, { to, cc, bcc, subject, body, replyToMessageId }),
       ),
+  );
+
+  server.registerTool(
+    "drive_trash_file",
+    {
+      title: "Move Google Drive file to trash",
+      description: 'Move a file to Google Drive trash, where it is recoverable. Requires one explicit account alias; "all" is rejected.',
+      inputSchema: {
+        account: z.string().describe("Account alias"),
+        fileId: z.string().min(1).describe("Google Drive file ID"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true },
+    },
+    async ({ account, fileId }) => toolResult(await driveTrashFile(account, fileId)),
+  );
+
+  server.registerTool(
+    "calendar_delete_event",
+    {
+      title: "Delete Google Calendar event",
+      description: 'Delete an event without emailing attendees. Requires one explicit account alias; "all" is rejected.',
+      inputSchema: {
+        account: z.string().describe("Account alias"),
+        eventId: z.string().min(1).describe("Google Calendar event ID"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true },
+    },
+    async ({ account, eventId }) => toolResult(await calendarDeleteEvent(account, eventId)),
+  );
+
+  server.registerTool(
+    "gmail_delete_draft",
+    {
+      title: "Delete Gmail draft",
+      description: 'Delete a Gmail draft only, never a message. Requires one explicit account alias; "all" is rejected.',
+      inputSchema: {
+        account: z.string().describe("Account alias"),
+        draftId: z.string().min(1).describe("Gmail draft ID"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true },
+    },
+    async ({ account, draftId }) => toolResult(await gmailDeleteDraft(account, draftId)),
   );
 
   return server;

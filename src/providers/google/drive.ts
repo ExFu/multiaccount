@@ -46,6 +46,13 @@ export interface UpdatedDriveFile extends CreatedDriveFile {
   modifiedTime?: string;
 }
 
+export interface TrashedDriveFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  trashed: true;
+}
+
 function driveClient(client: Auth.OAuth2Client): drive_v3.Drive {
   return google.drive({ version: "v3", auth: client });
 }
@@ -199,5 +206,23 @@ export async function updateFileContent(
     mimeType: file.mimeType ?? existingMimeType,
     ...(file.modifiedTime ? { modifiedTime: file.modifiedTime } : {}),
     ...(file.webViewLink ? { webViewLink: file.webViewLink } : {}),
+  };
+}
+
+export async function trashFile(
+  client: Auth.OAuth2Client,
+  fileId: string,
+): Promise<TrashedDriveFile> {
+  const response = await driveClient(client).files.update({
+    fileId,
+    requestBody: { trashed: true },
+    fields: "id,name,mimeType,trashed",
+  });
+  const file = response.data;
+  return {
+    id: file.id ?? fileId,
+    name: file.name ?? "",
+    mimeType: file.mimeType ?? "",
+    trashed: true,
   };
 }

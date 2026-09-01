@@ -29,8 +29,9 @@ The server requests exactly these Google OAuth scopes:
 - `https://www.googleapis.com/auth/drive`
 - `https://www.googleapis.com/auth/calendar.events`
 
-Gmail writes only create drafts; the server has no email-send tool. Calendar
-writes suppress attendee emails. There are no delete tools.
+Gmail writes only create or delete drafts; the server has no email-send or
+message-delete tool. Calendar writes suppress attendee emails. Drive deletion
+moves files to the recoverable trash rather than permanently deleting them.
 
 ## Configure
 
@@ -125,6 +126,9 @@ accounts. Results and per-account errors are tagged with the source alias.
 - `calendar_create_event` creates an event without emailing attendees.
 - `calendar_update_event` updates an event without emailing attendees.
 - `gmail_create_draft` saves a new or threaded-reply draft and never sends it.
+- `drive_trash_file` moves a file to Drive trash, where it remains recoverable.
+- `calendar_delete_event` deletes an event without emailing attendees.
+- `gmail_delete_draft` deletes only a Gmail draft, never a message.
 
 Every write tool requires one explicit `account` alias. `"all"` is rejected,
 and each successful result includes the acting alias and account email.

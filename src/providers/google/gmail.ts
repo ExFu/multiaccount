@@ -32,6 +32,11 @@ export interface GmailDraft {
   subject: string;
 }
 
+export interface DeletedGmailDraft {
+  draftId: string;
+  deleted: true;
+}
+
 function gmailClient(client: Auth.OAuth2Client): gmail_v1.Gmail {
   return google.gmail({ version: "v1", auth: client });
 }
@@ -281,4 +286,12 @@ export async function createDraft(
     to,
     subject,
   };
+}
+
+export async function deleteDraft(
+  client: Auth.OAuth2Client,
+  draftId: string,
+): Promise<DeletedGmailDraft> {
+  await gmailClient(client).users.drafts.delete({ userId: "me", id: draftId });
+  return { draftId, deleted: true };
 }
