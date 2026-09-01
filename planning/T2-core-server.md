@@ -62,3 +62,32 @@ Spawned from `T1-top-level` §3 theme "Core server".
 Accepted by operator (al) under the session carte-blanche grant of
 2026-09-01. No open questions at acceptance; token-store keychain upgrade
 and HTTP transport are deliberately deferred, not gaps.
+
+## 5. Write tools (2026-09-01 append — M3)
+
+`T1-top-level` §5 Q2 ruled that writes arrive "later behind an explicit
+confirmation design". M3 is that later. Principle 6 ("read-only v1") is
+discharged, not violated: v1 shipped read-only, and writes now open under
+these binding principles:
+
+- **W1 — writes never fan out.** Every write tool requires one explicit
+  account alias; `"all"` is rejected with an error. Principle 3's fan-out
+  applies to reads only.
+- **W2 — no send, ever.** Email writes stop at drafts. No code path may
+  call any Gmail send API. Google offers no drafts-without-send scope
+  (`gmail.compose` technically permits sending), so this guarantee is
+  enforced entirely at the tool layer: the send call does not exist in
+  this codebase. Calendar writes never email attendees in M3:
+  `sendUpdates: "none"` on every insert/patch.
+- **W3 — every write returns a receipt.** Acting alias + account email +
+  resource id + web link, so the client can show what was written where.
+  Wrong-account writes are the project's scariest failure mode (T1 §5
+  Q2); the receipt makes them immediately visible.
+- **W4 — write tools declare themselves.** MCP tool annotations carry
+  `readOnlyHint: false` on all writes and `destructiveHint: true` where
+  existing content is replaced. Confirmation is the client's ceremony;
+  the server's job is honest labeling.
+- **W5 — scopes widen only as far as M3 requires.** New scope set:
+  `gmail.readonly`, `gmail.compose`, `drive` (full — required to edit
+  files the app did not create; `drive.file` cannot), `calendar.events`.
+  `drive.readonly` and `calendar.readonly` drop out as subsumed.
