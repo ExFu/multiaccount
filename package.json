@@ -1,7 +1,7 @@
 {
   "name": "exfu-multiaccount",
   "version": "0.1.0",
-  "description": "A local, read-only multi-account Gmail MCP server",
+  "description": "A local multi-account Google workspace MCP server",
   "type": "module",
   "bin": {
     "exfu-multiaccount": "dist/cli.js"

@@ -4,9 +4,14 @@ import { z } from "zod";
 import {
   accountsAdd,
   accountsList,
+  calendarCreateEvent,
   calendarEvents,
+  calendarUpdateEvent,
+  driveCreateFile,
   driveReadFile,
   driveSearch,
+  driveUpdateFile,
+  gmailCreateDraft,
   gmailGetMessage,
   gmailSearch,
 } from "./tools.js";
@@ -115,6 +120,129 @@ export function createServer(): McpServer {
     },
     async ({ account, timeMin, timeMax, query, maxResults }) =>
       toolResult(await calendarEvents(account, { timeMin, timeMax, query, maxResults })),
+  );
+
+  server.registerTool(
+    "drive_create_file",
+    {
+      title: "Create Google Drive file",
+      description: 'Create a file in Google Drive. Requires one explicit account alias; "all" is rejected.',
+      inputSchema: {
+        account: z.string().describe("Account alias"),
+        name: z.string().min(1).describe("File name"),
+        content: z.string().describe("File content"),
+        mimeType: z.string().optional().describe("Media MIME type; defaults to text/plain"),
+        folderId: z.string().optional().describe("Parent Google Drive folder ID"),
+        asGoogleDoc: z.boolean().optional().describe("Convert the uploaded content to a Google Doc"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    async ({ account, name, content, mimeType, folderId, asGoogleDoc }) =>
+      toolResult(
+        await driveCreateFile(account, { name, content, mimeType, folderId, asGoogleDoc }),
+      ),
+  );
+
+  server.registerTool(
+    "drive_update_file",
+    {
+      title: "Update Google Drive file content",
+      description: 'Replace a supported Drive file\'s content. Requires one explicit account alias; "all" is rejected.',
+      inputSchema: {
+        account: z.string().describe("Account alias"),
+        fileId: z.string().min(1).describe("Google Drive file ID"),
+        content: z.string().describe("Replacement file content"),
+        contentMimeType: z.string().optional().describe("MIME type of the replacement content"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true },
+    },
+    async ({ account, fileId, content, contentMimeType }) =>
+      toolResult(await driveUpdateFile(account, fileId, content, contentMimeType)),
+  );
+
+  server.registerTool(
+    "calendar_create_event",
+    {
+      title: "Create Google Calendar event",
+      description: 'Create an event without emailing attendees. Requires one explicit account alias; "all" is rejected.',
+      inputSchema: {
+        account: z.string().describe("Account alias"),
+        summary: z.string().min(1).describe("Event summary"),
+        start: z.string().min(1).describe("ISO date or date-time start"),
+        end: z.string().min(1).describe("ISO date or date-time end"),
+        timeZone: z.string().optional().describe("IANA time zone for date-time values"),
+        description: z.string().optional().describe("Event description"),
+        location: z.string().optional().describe("Event location"),
+        attendees: z.array(z.string()).optional().describe("Attendee email addresses"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    async ({ account, summary, start, end, timeZone, description, location, attendees }) =>
+      toolResult(
+        await calendarCreateEvent(account, {
+          summary,
+          start,
+          end,
+          timeZone,
+          description,
+          location,
+          attendees,
+        }),
+      ),
+  );
+
+  server.registerTool(
+    "calendar_update_event",
+    {
+      title: "Update Google Calendar event",
+      description: 'Update an event without emailing attendees. Requires one explicit account alias; "all" is rejected.',
+      inputSchema: {
+        account: z.string().describe("Account alias"),
+        eventId: z.string().min(1).describe("Google Calendar event ID"),
+        summary: z.string().optional().describe("Event summary"),
+        start: z.string().optional().describe("ISO date or date-time start"),
+        end: z.string().optional().describe("ISO date or date-time end"),
+        timeZone: z.string().optional().describe("IANA time zone for date-time values"),
+        description: z.string().optional().describe("Event description"),
+        location: z.string().optional().describe("Event location"),
+        attendees: z.array(z.string()).optional().describe("Attendee email addresses"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true },
+    },
+    async ({ account, eventId, summary, start, end, timeZone, description, location, attendees }) =>
+      toolResult(
+        await calendarUpdateEvent(account, eventId, {
+          summary,
+          start,
+          end,
+          timeZone,
+          description,
+          location,
+          attendees,
+        }),
+      ),
+  );
+
+  server.registerTool(
+    "gmail_create_draft",
+    {
+      title: "Create Gmail draft",
+      description: 'Save a Gmail draft; it is never sent. Requires one explicit account alias; "all" is rejected.',
+      inputSchema: {
+        account: z.string().describe("Account alias"),
+        to: z.array(z.string()).optional().describe("To recipients"),
+        cc: z.array(z.string()).optional().describe("Cc recipients"),
+        bcc: z.array(z.string()).optional().describe("Bcc recipients"),
+        subject: z.string().optional().describe("Draft subject"),
+        body: z.string().describe("Plain-text message body"),
+        replyToMessageId: z.string().optional().describe("Gmail message ID to reply to"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    async ({ account, to, cc, bcc, subject, body, replyToMessageId }) =>
+      toolResult(
+        await gmailCreateDraft(account, { to, cc, bcc, subject, body, replyToMessageId }),
+      ),
   );
 
   return server;

@@ -27,6 +27,25 @@ export interface DriveFile {
   note?: string;
 }
 
+export interface CreateFileOptions {
+  name: string;
+  content: string;
+  mimeType?: string;
+  folderId?: string;
+  asGoogleDoc?: boolean;
+}
+
+export interface CreatedDriveFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink?: string;
+}
+
+export interface UpdatedDriveFile extends CreatedDriveFile {
+  modifiedTime?: string;
+}
+
 function driveClient(client: Auth.OAuth2Client): drive_v3.Drive {
   return google.drive({ version: "v3", auth: client });
 }
@@ -112,4 +131,73 @@ export async function readFile(
   }
 
   return { ...base, body: "", note: "binary file; not fetched" };
+}
+
+export async function createFile(
+  client: Auth.OAuth2Client,
+  options: CreateFileOptions,
+): Promise<CreatedDriveFile> {
+  const response = await driveClient(client).files.create({
+    requestBody: {
+      name: options.name,
+      ...(options.folderId ? { parents: [options.folderId] } : {}),
+      ...(options.asGoogleDoc
+        ? { mimeType: "application/vnd.google-apps.document" }
+        : {}),
+    },
+    media: {
+      mimeType: options.mimeType ?? "text/plain",
+      body: options.content,
+    },
+    fields: "id,name,mimeType,webViewLink",
+  });
+  const file = response.data;
+  return {
+    id: file.id ?? "",
+    name: file.name ?? "",
+    mimeType: file.mimeType ?? "",
+    ...(file.webViewLink ? { webViewLink: file.webViewLink } : {}),
+  };
+}
+
+export async function updateFileContent(
+  client: Auth.OAuth2Client,
+  fileId: string,
+  content: string,
+  contentMimeType?: string,
+): Promise<UpdatedDriveFile> {
+  const drive = driveClient(client);
+  const metadataResponse = await drive.files.get({
+    fileId,
+    fields: "id,name,mimeType",
+  });
+  const existingMimeType = metadataResponse.data.mimeType ?? "";
+  let mediaMimeType: string;
+
+  if (existingMimeType === "application/vnd.google-apps.document") {
+    mediaMimeType = contentMimeType ?? "text/plain";
+  } else if (
+    existingMimeType === "application/vnd.google-apps.spreadsheet" ||
+    existingMimeType === "application/vnd.google-apps.presentation"
+  ) {
+    throw new Error("Updating Google Sheets/Slides is not supported.");
+  } else if (existingMimeType.startsWith("text/") || existingMimeType === "application/json") {
+    mediaMimeType = contentMimeType ?? existingMimeType;
+  } else {
+    throw new Error("Updating binary files is not supported.");
+  }
+
+  const response = await drive.files.update({
+    fileId,
+    media: { mimeType: mediaMimeType, body: content },
+    fields: "id,name,mimeType,modifiedTime,webViewLink",
+  });
+  const file = response.data;
+  return {
+    id: file.id ?? fileId,
+    name: file.name ?? "",
+    mimeType: file.mimeType ?? existingMimeType,
+    ...(file.modifiedTime ? { modifiedTime: file.modifiedTime } : {}),
+    ...(file.webViewLink ? { webViewLink: file.webViewLink } : {}),
+  };
 }

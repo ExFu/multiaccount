@@ -5,7 +5,7 @@
 //   node scripts/reauth.mjs            # all accounts, one browser flow each
 //   node scripts/reauth.mjs <alias>    # just that account
 import { loadAccounts } from "../dist/accounts/registry.js";
-import { FileTokenStore } from "../dist/accounts/tokens.js";
+import { createTokenStore } from "../dist/accounts/storeFactory.js";
 import { authorizeGoogleAccount } from "../dist/providers/google/auth.js";
 import { getProfileEmail } from "../dist/providers/google/gmail.js";
 
@@ -25,7 +25,7 @@ if (!selected.length) {
   process.exit(1);
 }
 
-const tokenStore = new FileTokenStore();
+const tokenStore = createTokenStore();
 let failures = 0;
 
 for (const { alias, email } of selected) {

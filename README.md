@@ -1,9 +1,9 @@
 # exfu-multiaccount
 
 `exfu-multiaccount` is a local MCP server that gives an AI assistant explicit,
-read-only access to Gmail, Google Drive, and Google Calendar across more than
-one Google account. Each account has a human alias; credentials remain in a
-separate local token file and are never returned by a tool.
+account-routed access to Gmail, Google Drive, and Google Calendar across more
+than one Google account. Each account has a human alias; credentials remain in
+a separate local token file and are never returned by a tool.
 
 ## Install and build
 
@@ -22,8 +22,15 @@ npm run build
 4. Create an OAuth client ID with application type **Desktop app**.
 5. Download the client-secret JSON file to a private local location.
 
-The server requests only the read-only Gmail, Drive, and Calendar scopes. It
-cannot send, delete, or modify mail, files, or calendar events.
+The server requests exactly these Google OAuth scopes:
+
+- `https://www.googleapis.com/auth/gmail.readonly`
+- `https://www.googleapis.com/auth/gmail.compose`
+- `https://www.googleapis.com/auth/drive`
+- `https://www.googleapis.com/auth/calendar.events`
+
+Gmail writes only create drafts; the server has no email-send tool. Calendar
+writes suppress attendee emails. There are no delete tools.
 
 ## Configure
 
@@ -67,8 +74,9 @@ node dist/cli.js remove-account work
 Removing an account deletes its registry entry and local token file. It does
 not revoke the OAuth grant at Google.
 
-Existing accounts must re-consent before Drive and Calendar tools can use the
-new scopes. Rebuild, then re-authorize all accounts or one alias at a time:
+Every existing account must re-consent before the write tools can use the new
+scope set. Rebuild, then re-authorize all accounts with
+`node scripts/reauth.mjs`, or re-authorize one alias at a time:
 
 ```sh
 npm run build
@@ -102,6 +110,18 @@ Restart Claude Code, then use these tools:
   text formats; binary files are not downloaded.
 - `calendar_events` lists events from the account's primary calendar.
 
-Every Gmail, Drive, and Calendar tool requires an `account` alias; use `"all"`
-to fan out across configured accounts. Results and per-account errors are tagged
-with the source alias.
+Read tools accept an `account` alias or `"all"` to fan out across configured
+accounts. Results and per-account errors are tagged with the source alias.
+
+## Write tools
+
+- `drive_create_file` creates a Drive file and can convert uploaded text into a
+  Google Doc.
+- `drive_update_file` replaces the content of a Google Doc or text file; Sheets,
+  Slides, and binary files are rejected.
+- `calendar_create_event` creates an event without emailing attendees.
+- `calendar_update_event` updates an event without emailing attendees.
+- `gmail_create_draft` saves a new or threaded-reply draft and never sends it.
+
+Every write tool requires one explicit `account` alias. `"all"` is rejected,
+and each successful result includes the acting alias and account email.

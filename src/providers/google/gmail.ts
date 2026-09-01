@@ -15,6 +15,23 @@ export interface GmailMessage extends GmailSearchResult {
   body: string;
 }
 
+export interface GmailDraftInput {
+  to?: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject?: string;
+  body: string;
+  replyToMessageId?: string;
+}
+
+export interface GmailDraft {
+  draftId: string;
+  messageId: string;
+  threadId?: string;
+  to: string[];
+  subject: string;
+}
+
 function gmailClient(client: Auth.OAuth2Client): gmail_v1.Gmail {
   return google.gmail({ version: "v1", auth: client });
 }
@@ -172,4 +189,71 @@ export async function getProfileEmail(client: Auth.OAuth2Client): Promise<string
     throw new Error("Google did not return an email address for the authorized account.");
   }
   return response.data.emailAddress;
+}
+
+export async function createDraft(
+  client: Auth.OAuth2Client,
+  input: GmailDraftInput,
+): Promise<GmailDraft> {
+  const gmail = gmailClient(client);
+  let threadId: string | undefined;
+  let replyMessageId: string | undefined;
+  let derivedTo: string[] | undefined;
+  let derivedSubject: string | undefined;
+
+  if (input.replyToMessageId) {
+    const reply = await gmail.users.messages.get({
+      userId: "me",
+      id: input.replyToMessageId,
+      format: "metadata",
+      metadataHeaders: ["Message-ID", "Subject", "From", "To", "Reply-To"],
+    });
+    const values = headers(reply.data.payload);
+    threadId = reply.data.threadId ?? undefined;
+    replyMessageId = values["message-id"] || undefined;
+    derivedTo = values["reply-to"]
+      ? [values["reply-to"]]
+      : values.from
+        ? [values.from]
+        : undefined;
+    if (values.subject) {
+      derivedSubject = /^re:/i.test(values.subject) ? values.subject : `Re: ${values.subject}`;
+    }
+  }
+
+  const to = input.to ?? derivedTo;
+  const subject = input.subject ?? derivedSubject;
+  if (!to?.length) {
+    throw new Error("Draft recipient is required.");
+  }
+  if (!subject?.trim()) {
+    throw new Error("Draft subject is required.");
+  }
+
+  const message = [
+    `To: ${to.join(", ")}`,
+    ...(input.cc?.length ? [`Cc: ${input.cc.join(", ")}`] : []),
+    ...(input.bcc?.length ? [`Bcc: ${input.bcc.join(", ")}`] : []),
+    `Subject: ${subject}`,
+    ...(replyMessageId ? [`In-Reply-To: ${replyMessageId}`, `References: ${replyMessageId}`] : []),
+    "MIME-Version: 1.0",
+    "Content-Type: text/plain; charset=UTF-8",
+    "",
+    input.body,
+  ].join("\r\n");
+  const raw = Buffer.from(message, "utf8").toString("base64url");
+  const response = await gmail.users.drafts.create({
+    userId: "me",
+    requestBody: {
+      message: { raw, ...(threadId ? { threadId } : {}) },
+    },
+  });
+
+  return {
+    draftId: response.data.id ?? "",
+    messageId: response.data.message?.id ?? "",
+    ...(response.data.message?.threadId ? { threadId: response.data.message.threadId } : {}),
+    to,
+    subject,
+  };
 }

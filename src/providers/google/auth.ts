@@ -11,8 +11,9 @@ import { loadConfig, type ExfuConfig } from "../../config.js";
 
 export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
-  "https://www.googleapis.com/auth/drive.readonly",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/gmail.compose",
+  "https://www.googleapis.com/auth/drive",
+  "https://www.googleapis.com/auth/calendar.events",
 ];
 
 interface ClientDefinition {

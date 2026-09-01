@@ -14,20 +14,32 @@ import {
   GOOGLE_SCOPES,
 } from "./providers/google/auth.js";
 import {
+  createEvent,
   listEvents,
+  updateEvent,
   type CalendarEvent,
+  type CalendarEventInput,
   type CalendarEventOptions,
+  type CalendarEventPatch,
 } from "./providers/google/calendar.js";
 import {
+  createFile,
   readFile,
   searchFiles,
+  updateFileContent,
+  type CreateFileOptions,
+  type CreatedDriveFile,
   type DriveFile,
   type DriveSearchResult,
+  type UpdatedDriveFile,
 } from "./providers/google/drive.js";
 import {
+  createDraft,
   getMessage,
   getProfileEmail,
   searchMessages,
+  type GmailDraft,
+  type GmailDraftInput,
   type GmailMessage,
   type GmailSearchResult,
 } from "./providers/google/gmail.js";
@@ -42,6 +54,7 @@ export type TaggedMessage = GmailMessage & { account: string };
 export type TaggedDriveSearchResult = DriveSearchResult & { account: string };
 export type TaggedDriveFile = DriveFile & { account: string };
 export type TaggedCalendarEvent = CalendarEvent & { account: string };
+export type WriteReceipt<T> = T & { account: string; accountEmail: string };
 
 export interface CalendarEventsOptions {
   timeMin?: string;
@@ -114,6 +127,13 @@ async function selectedAccounts(account: string): Promise<Account[]> {
     return loadAccounts();
   }
   return [await getAccount(account)];
+}
+
+export async function requireWritableAccount(account: string): Promise<Account> {
+  if (account === "all") {
+    throw new Error('Write tools require one explicit account alias; "all" is not permitted.');
+  }
+  return getAccount(account);
 }
 
 export async function gmailSearch(
@@ -213,4 +233,97 @@ export async function calendarEvents(
     }),
   );
   return results.flat();
+}
+
+export async function driveCreateFile(
+  account: string,
+  options: CreateFileOptions,
+): Promise<WriteReceipt<CreatedDriveFile>> {
+  const registryAccount = await requireWritableAccount(account);
+  try {
+    const client = await getAuthedClient(registryAccount.alias);
+    const file = await createFile(client, options);
+    return {
+      account: registryAccount.alias,
+      accountEmail: registryAccount.email,
+      ...file,
+    };
+  } catch (error) {
+    throw new Error(safeAccountError(error, registryAccount.alias).error);
+  }
+}
+
+export async function driveUpdateFile(
+  account: string,
+  fileId: string,
+  content: string,
+  contentMimeType?: string,
+): Promise<WriteReceipt<UpdatedDriveFile>> {
+  const registryAccount = await requireWritableAccount(account);
+  try {
+    const client = await getAuthedClient(registryAccount.alias);
+    const file = await updateFileContent(client, fileId, content, contentMimeType);
+    return {
+      account: registryAccount.alias,
+      accountEmail: registryAccount.email,
+      ...file,
+    };
+  } catch (error) {
+    throw new Error(safeAccountError(error, registryAccount.alias).error);
+  }
+}
+
+export async function calendarCreateEvent(
+  account: string,
+  input: CalendarEventInput,
+): Promise<WriteReceipt<CalendarEvent>> {
+  const registryAccount = await requireWritableAccount(account);
+  try {
+    const client = await getAuthedClient(registryAccount.alias);
+    const event = await createEvent(client, input);
+    return {
+      account: registryAccount.alias,
+      accountEmail: registryAccount.email,
+      ...event,
+    };
+  } catch (error) {
+    throw new Error(safeAccountError(error, registryAccount.alias).error);
+  }
+}
+
+export async function calendarUpdateEvent(
+  account: string,
+  eventId: string,
+  patch: CalendarEventPatch,
+): Promise<WriteReceipt<CalendarEvent>> {
+  const registryAccount = await requireWritableAccount(account);
+  try {
+    const client = await getAuthedClient(registryAccount.alias);
+    const event = await updateEvent(client, eventId, patch);
+    return {
+      account: registryAccount.alias,
+      accountEmail: registryAccount.email,
+      ...event,
+    };
+  } catch (error) {
+    throw new Error(safeAccountError(error, registryAccount.alias).error);
+  }
+}
+
+export async function gmailCreateDraft(
+  account: string,
+  input: GmailDraftInput,
+): Promise<WriteReceipt<GmailDraft>> {
+  const registryAccount = await requireWritableAccount(account);
+  try {
+    const client = await getAuthedClient(registryAccount.alias);
+    const draft = await createDraft(client, input);
+    return {
+      account: registryAccount.alias,
+      accountEmail: registryAccount.email,
+      ...draft,
+    };
+  } catch (error) {
+    throw new Error(safeAccountError(error, registryAccount.alias).error);
+  }
 }
