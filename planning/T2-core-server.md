@@ -100,3 +100,36 @@ these binding principles:
   notifies attendees (`sendUpdates: "none"`). W1, W3, and W4 apply to
   deletes as to all writes; deletes always carry
   `destructiveHint: true`.
+
+## 6. Attachments (2026-09-05 append — M4)
+
+Operator request 2026-09-05: agents must be able to find, inspect, and
+retrieve Gmail attachments, and attach files to drafts. Binding
+principles for that surface:
+
+- **A1 — the caller chooses depth.** The calling agent knows whether it
+  is running a wide sweep or a focused enquiry. Every attachment read
+  therefore exposes an explicit depth choice — existence and metadata,
+  a bounded text preview, full extracted text, or raw bytes — and
+  defaults to the cheapest option. The server never guesses.
+- **A2 — bytes go to disk, not to context.** Raw attachment content is
+  written to a caller-supplied local directory and the tool returns
+  the path plus metadata. Inline base64 is available only under a hard
+  size cap; above it the tool refuses and points at the save mode.
+- **A3 — text extraction is best-effort and honest.** Text mode covers
+  plain-text families, PDF and DOCX. Unsupported types return a clear
+  "not text-extractable" result naming the MIME type, never silently
+  empty text. Extraction failures surface as errors, never as blank
+  documents.
+- **A4 — inline images and Drive links are opt-in.** Inline `cid:`
+  images are excluded from attachment listings unless the caller asks;
+  Google Drive links found in a message body are surfaced only when the
+  caller asks, as file ids for the existing Drive tools, never fetched
+  by the Gmail tools.
+- **A5 — outgoing attachments obey the write principles.** Attaching
+  files to a draft is a write: W1–W4 apply unchanged, W2 (no send)
+  stays absolute, and the total attachment size is capped below
+  Gmail's 25 MB message limit so drafts never fail late.
+- **A6 — no new scopes.** `gmail.readonly` already covers attachment
+  reads and `gmail.compose` covers attachments on drafts. No account
+  re-consent is required for M4.
