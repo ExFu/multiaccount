@@ -143,6 +143,10 @@ needed.
 - `calendar_create_event` creates an event without emailing attendees.
 - `calendar_update_event` updates an event without emailing attendees.
 - `gmail_create_draft` saves a new or threaded-reply draft and never sends it.
+  Its optional `attachments` array accepts local file objects with `path`, plus
+  optional `filename` and `mimeType` overrides. Paths are resolved on the
+  machine running the server; each draft supports at most 20 files and 20 MiB
+  total attachment bytes.
 - `drive_trash_file` moves a file to Drive trash, where it remains recoverable.
 - `calendar_delete_event` deletes an event without emailing attendees.
 - `gmail_delete_draft` deletes only a Gmail draft, never a message.

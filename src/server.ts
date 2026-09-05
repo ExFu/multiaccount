@@ -368,12 +368,32 @@ export function createServer(): McpServer {
         subject: z.string().optional().describe("Draft subject"),
         body: z.string().describe("Plain-text message body"),
         replyToMessageId: z.string().optional().describe("Gmail message ID to reply to"),
+        attachments: z
+          .array(
+            z.object({
+              path: z.string().min(1),
+              filename: z.string().optional(),
+              mimeType: z.string().optional(),
+            }),
+          )
+          .optional()
+          .describe(
+            "Local file paths on the machine running the server; total ≤ 20 MiB, ≤ 20 files.",
+          ),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
-    async ({ account, to, cc, bcc, subject, body, replyToMessageId }) =>
+    async ({ account, to, cc, bcc, subject, body, replyToMessageId, attachments }) =>
       toolResult(
-        await gmailCreateDraft(account, { to, cc, bcc, subject, body, replyToMessageId }),
+        await gmailCreateDraft(account, {
+          to,
+          cc,
+          bcc,
+          subject,
+          body,
+          replyToMessageId,
+          attachments,
+        }),
       ),
   );
 

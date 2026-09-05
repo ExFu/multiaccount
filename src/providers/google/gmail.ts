@@ -1,10 +1,38 @@
-import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { createHash, randomBytes } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { basename, extname, resolve } from "node:path";
 import { google, type Auth, type gmail_v1 } from "googleapis";
 import { extractText, isTextExtractable } from "./attachmentText.js";
 
 const BASE64_LIMIT_BYTES = 1_048_576;
+
+export const DRAFT_ATTACHMENT_TOTAL_LIMIT_BYTES = 20 * 1024 * 1024;
+export const DRAFT_ATTACHMENT_MAX_COUNT = 20;
+
+const DRAFT_ATTACHMENT_MIME_TYPES: Record<string, string> = {
+  pdf: "application/pdf",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  txt: "text/plain",
+  md: "text/markdown",
+  csv: "text/csv",
+  json: "application/json",
+  xml: "application/xml",
+  html: "text/html",
+  zip: "application/zip",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  doc: "application/msword",
+  xls: "application/vnd.ms-excel",
+  ppt: "application/vnd.ms-powerpoint",
+  mp3: "audio/mpeg",
+  mp4: "video/mp4",
+  ics: "text/calendar",
+};
 
 export interface GmailAttachmentMeta {
   attachmentId: string;
@@ -87,6 +115,7 @@ export interface GmailDraftInput {
   subject?: string;
   body: string;
   replyToMessageId?: string;
+  attachments?: Array<{ path: string; filename?: string; mimeType?: string }>;
 }
 
 export interface GmailDraft {
@@ -95,6 +124,7 @@ export interface GmailDraft {
   threadId?: string;
   to: string[];
   subject: string;
+  attachments: Array<{ filename: string; mimeType: string; size: number }>;
 }
 
 export interface DeletedGmailDraft {
@@ -544,8 +574,8 @@ export async function getProfileEmail(client: Auth.OAuth2Client): Promise<string
 }
 
 // RFC 5322 headers are ASCII-only; non-ASCII values must be RFC 2047 encoded-words.
-function encodeHeaderValue(value: string): string {
-  if (/^[\x20-\x7e]*$/.test(value)) {
+function encodeHeaderValue(value: string, force = false): string {
+  if (!force && /^[\x20-\x7e]*$/.test(value)) {
     return value;
   }
   return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
@@ -568,10 +598,63 @@ function addressList(addresses: string[]): string {
   return addresses.map(encodeAddress).join(", ");
 }
 
+interface LoadedDraftAttachment {
+  bytes: Buffer;
+  filename: string;
+  mimeType: string;
+}
+
+async function loadDraftAttachments(
+  attachments: NonNullable<GmailDraftInput["attachments"]>,
+): Promise<LoadedDraftAttachment[]> {
+  if (attachments.length > DRAFT_ATTACHMENT_MAX_COUNT) {
+    throw new Error(
+      `Draft attachments are limited to ${DRAFT_ATTACHMENT_MAX_COUNT} files.`,
+    );
+  }
+
+  const loaded = await Promise.all(
+    attachments.map(async (attachment): Promise<LoadedDraftAttachment> => {
+      let bytes: Buffer;
+      try {
+        bytes = await readFile(resolve(attachment.path));
+      } catch {
+        throw new Error(`Attachment not readable: ${attachment.path}`);
+      }
+      const filename = attachment.filename ?? basename(attachment.path);
+      const extension = extname(filename).slice(1).toLowerCase();
+      return {
+        bytes,
+        filename,
+        mimeType:
+          attachment.mimeType ??
+          DRAFT_ATTACHMENT_MIME_TYPES[extension] ??
+          "application/octet-stream",
+      };
+    }),
+  );
+  const totalSize = loaded.reduce((total, attachment) => total + attachment.bytes.length, 0);
+  if (totalSize > DRAFT_ATTACHMENT_TOTAL_LIMIT_BYTES) {
+    throw new Error(
+      `Draft attachments exceed the ${DRAFT_ATTACHMENT_TOTAL_LIMIT_BYTES} byte (20 MiB) total limit.`,
+    );
+  }
+  return loaded;
+}
+
+function wrapBase64(bytes: Buffer): string {
+  return bytes.toString("base64").match(/.{1,76}/g)?.join("\r\n") ?? "";
+}
+
+function attachmentFilenameHeader(filename: string): string {
+  return encodeHeaderValue(filename, filename.includes('"'));
+}
+
 export async function createDraft(
   client: Auth.OAuth2Client,
   input: GmailDraftInput,
 ): Promise<GmailDraft> {
+  const attachments = await loadDraftAttachments(input.attachments ?? []);
   const gmail = gmailClient(client);
   let threadId: string | undefined;
   let replyMessageId: string | undefined;
@@ -607,17 +690,43 @@ export async function createDraft(
     throw new Error("Draft subject is required.");
   }
 
-  const message = [
+  const messageHeaders = [
     `To: ${addressList(to)}`,
     ...(input.cc?.length ? [`Cc: ${addressList(input.cc)}`] : []),
     ...(input.bcc?.length ? [`Bcc: ${addressList(input.bcc)}`] : []),
     `Subject: ${encodeHeaderValue(subject)}`,
     ...(replyMessageId ? [`In-Reply-To: ${replyMessageId}`, `References: ${replyMessageId}`] : []),
     "MIME-Version: 1.0",
-    "Content-Type: text/plain; charset=UTF-8",
-    "",
-    input.body,
-  ].join("\r\n");
+  ];
+  const message = attachments.length
+    ? (() => {
+        const boundary = `=_exfu_${randomBytes(12).toString("hex")}`;
+        return [
+          ...messageHeaders,
+          `Content-Type: multipart/mixed; boundary="${boundary}"`,
+          "",
+          `--${boundary}`,
+          "Content-Type: text/plain; charset=UTF-8",
+          "Content-Transfer-Encoding: 8bit",
+          "",
+          input.body,
+          ...attachments.flatMap((attachment) => {
+            const filename = attachmentFilenameHeader(attachment.filename);
+            return [
+              `--${boundary}`,
+              `Content-Type: ${attachment.mimeType}; name="${filename}"`,
+              `Content-Disposition: attachment; filename="${filename}"`,
+              "Content-Transfer-Encoding: base64",
+              "",
+              wrapBase64(attachment.bytes),
+            ];
+          }),
+          `--${boundary}--`,
+        ].join("\r\n");
+      })()
+    : [...messageHeaders, "Content-Type: text/plain; charset=UTF-8", "", input.body].join(
+        "\r\n",
+      );
   const raw = Buffer.from(message, "utf8").toString("base64url");
   const response = await gmail.users.drafts.create({
     userId: "me",
@@ -632,6 +741,11 @@ export async function createDraft(
     ...(response.data.message?.threadId ? { threadId: response.data.message.threadId } : {}),
     to,
     subject,
+    attachments: attachments.map(({ filename, mimeType, bytes }) => ({
+      filename,
+      mimeType,
+      size: bytes.length,
+    })),
   };
 }
 
