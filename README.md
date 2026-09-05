@@ -114,6 +114,23 @@ Restart Claude Code, then use these tools:
 Read tools accept an `account` alias or `"all"` to fan out across configured
 accounts. Results and per-account errors are tagged with the source alias.
 
+### Attachments
+
+`gmail_search_attachments` finds attachments in one or all accounts and
+returns one row per attachment. It supports case-insensitive filename globs,
+MIME-type filters, optional inline attachments, and bounded text previews for
+PDF, DOCX, and text attachments. `gmail_search` can also include attachment
+metadata with `includeAttachments`; inline parts require `includeInline`.
+
+`gmail_get_attachment` retrieves one attachment in `text`, `save`, or `base64`
+mode. Text mode extracts PDF, DOCX, and text content and supports a character
+limit. Save mode writes bytes to a caller-chosen local directory on the machine
+running the server and refuses to overwrite by default. Base64 mode is capped
+at 1 MiB. `gmail_get_message` can include inline parts with `includeInline` and
+surface Google Drive file links with `includeDriveLinks`; Drive content is not
+fetched. These features use the existing Gmail read scope, so no re-consent is
+needed.
+
 ## Write tools
 
 - `drive_create_file` creates a Drive file and can convert uploaded text into a

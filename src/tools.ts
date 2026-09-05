@@ -46,13 +46,20 @@ import {
 import {
   createDraft,
   deleteDraft,
+  getAttachment,
   getMessage,
   getProfileEmail,
+  searchAttachments,
   searchMessages,
   type DeletedGmailDraft,
+  type GmailAttachmentInput,
+  type GmailAttachmentRow,
+  type GmailAttachmentSearchInput,
   type GmailDraft,
   type GmailDraftInput,
   type GmailMessage,
+  type GmailMessageOptions,
+  type GmailSearchOptions,
   type GmailSearchResult,
 } from "./providers/google/gmail.js";
 
@@ -63,6 +70,8 @@ export interface AccountError {
 
 export type TaggedSearchResult = GmailSearchResult & { account: string };
 export type TaggedMessage = GmailMessage & { account: string };
+export type TaggedAttachmentRow = GmailAttachmentRow & { account: string };
+export type TaggedAttachment = Record<string, unknown> & { account: string };
 export type TaggedDriveSearchResult = DriveSearchResult & { account: string };
 export type TaggedDriveFile = DriveFile & { account: string };
 export type TaggedCalendarEvent = CalendarEvent & { account: string };
@@ -152,13 +161,14 @@ export async function gmailSearch(
   account: string,
   query: string,
   maxResults = 10,
+  options: GmailSearchOptions = {},
 ): Promise<Array<TaggedSearchResult | AccountError>> {
   const accounts = await selectedAccounts(account);
   const results = await Promise.all(
     accounts.map(async ({ alias }) => {
       try {
         const client = await getAuthedClient(alias);
-        const messages = await searchMessages(client, query, maxResults);
+        const messages = await searchMessages(client, query, maxResults, options);
         return messages.map((message): TaggedSearchResult => ({ account: alias, ...message }));
       } catch (error) {
         return [safeAccountError(error, alias)];
@@ -171,14 +181,54 @@ export async function gmailSearch(
 export async function gmailGetMessage(
   account: string,
   messageId: string,
+  options: GmailMessageOptions = {},
 ): Promise<Array<TaggedMessage | AccountError>> {
   const accounts = await selectedAccounts(account);
   return Promise.all(
     accounts.map(async ({ alias }) => {
       try {
         const client = await getAuthedClient(alias);
-        const message = await getMessage(client, messageId);
+        const message = await getMessage(client, messageId, options);
         return { account: alias, ...message } as TaggedMessage;
+      } catch (error) {
+        return safeAccountError(error, alias);
+      }
+    }),
+  );
+}
+
+export async function gmailSearchAttachments(
+  account: string,
+  input: GmailAttachmentSearchInput,
+): Promise<Array<TaggedAttachmentRow | AccountError>> {
+  const accounts = await selectedAccounts(account);
+  const results = await Promise.all(
+    accounts.map(async ({ alias }) => {
+      try {
+        const client = await getAuthedClient(alias);
+        const attachments = await searchAttachments(client, input);
+        return attachments.map(
+          (attachment): TaggedAttachmentRow => ({ account: alias, ...attachment }),
+        );
+      } catch (error) {
+        return [safeAccountError(error, alias)];
+      }
+    }),
+  );
+  return results.flat();
+}
+
+export async function gmailGetAttachment(
+  account: string,
+  input: GmailAttachmentInput,
+): Promise<Array<TaggedAttachment | AccountError>> {
+  const accounts = await selectedAccounts(account);
+  return Promise.all(
+    accounts.map(async ({ alias }) => {
+      try {
+        const client = await getAuthedClient(alias);
+        const attachment = await getAttachment(client, input);
+        return { account: alias, ...attachment } as TaggedAttachment;
       } catch (error) {
         return safeAccountError(error, alias);
       }

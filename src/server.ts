@@ -17,8 +17,10 @@ import {
   docsReplaceText,
   gmailCreateDraft,
   gmailDeleteDraft,
+  gmailGetAttachment,
   gmailGetMessage,
   gmailSearch,
+  gmailSearchAttachments,
 } from "./tools.js";
 
 function toolResult(value: unknown) {
@@ -62,10 +64,14 @@ export function createServer(): McpServer {
         account: z.string().describe('Account alias or "all"'),
         query: z.string().describe("Gmail search query"),
         maxResults: z.number().int().min(1).max(100).default(10),
+        includeAttachments: z.boolean().default(false),
+        includeInline: z.boolean().default(false),
       },
     },
-    async ({ account, query, maxResults }) =>
-      toolResult(await gmailSearch(account, query, maxResults)),
+    async ({ account, query, maxResults, includeAttachments, includeInline }) =>
+      toolResult(
+        await gmailSearch(account, query, maxResults, { includeAttachments, includeInline }),
+      ),
   );
 
   server.registerTool(
@@ -76,10 +82,95 @@ export function createServer(): McpServer {
       inputSchema: {
         account: z.string().describe('Account alias or "all"'),
         messageId: z.string().min(1).describe("Gmail message ID"),
+        includeInline: z.boolean().default(false),
+        includeDriveLinks: z.boolean().default(false),
       },
     },
-    async ({ account, messageId }) =>
-      toolResult(await gmailGetMessage(account, messageId)),
+    async ({ account, messageId, includeInline, includeDriveLinks }) =>
+      toolResult(
+        await gmailGetMessage(account, messageId, { includeInline, includeDriveLinks }),
+      ),
+  );
+
+  server.registerTool(
+    "gmail_search_attachments",
+    {
+      title: "Search Gmail attachments",
+      description:
+        "Find attachments across one or all accounts; one row per attachment. " +
+        "previewChars > 0 adds a bounded text preview for PDF, DOCX and text attachments (slower).",
+      inputSchema: {
+        account: z.string().describe('Account alias or "all"'),
+        query: z.string().describe("Gmail search query"),
+        maxResults: z.number().int().min(1).max(100).default(10),
+        filenamePattern: z.string().optional().describe("Case-insensitive filename glob"),
+        mimeType: z.string().optional().describe("Exact MIME type or prefix ending in /"),
+        includeInline: z.boolean().default(false),
+        previewChars: z.number().int().min(0).max(4000).default(0),
+      },
+    },
+    async ({
+      account,
+      query,
+      maxResults,
+      filenamePattern,
+      mimeType,
+      includeInline,
+      previewChars,
+    }) =>
+      toolResult(
+        await gmailSearchAttachments(account, {
+          query,
+          maxResults,
+          filenamePattern,
+          mimeType,
+          includeInline,
+          previewChars,
+        }),
+      ),
+  );
+
+  server.registerTool(
+    "gmail_get_attachment",
+    {
+      title: "Get Gmail attachment",
+      description:
+        'Retrieve a Gmail attachment in "text", "save", or "base64" mode. Text mode extracts ' +
+        "PDF, DOCX, and text attachments. Base64 mode is capped at 1 MiB. Save mode writes to " +
+        "a caller-chosen local directory on the machine running the server.",
+      inputSchema: {
+        account: z.string().describe('Account alias or "all"'),
+        messageId: z.string().min(1).describe("Gmail message ID"),
+        attachmentId: z.string().min(1).describe("Gmail attachment ID"),
+        mode: z.enum(["text", "save", "base64"]),
+        maxChars: z.number().int().min(0).optional(),
+        outputDir: z.string().optional(),
+        filename: z.string().optional(),
+        overwrite: z.boolean().optional(),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({
+      account,
+      messageId,
+      attachmentId,
+      mode,
+      maxChars,
+      outputDir,
+      filename,
+      overwrite,
+    }) =>
+      toolResult(
+        await gmailGetAttachment(account, {
+          messageId,
+          attachmentId,
+          mode,
+          maxChars,
+          outputDir,
+          filename,
+          overwrite,
+        }),
+      ),
   );
 
   server.registerTool(
