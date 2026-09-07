@@ -47,8 +47,16 @@ const {
   };
 });
 
-vi.mock("googleapis", () => ({
-  google: { calendar: calendarFactory, drive: driveFactory, gmail: gmailFactory },
+vi.mock("@googleapis/calendar", () => ({
+  calendar: calendarFactory,
+}));
+
+vi.mock("@googleapis/drive", () => ({
+  drive: driveFactory,
+}));
+
+vi.mock("@googleapis/gmail", () => ({
+  gmail: gmailFactory,
 }));
 
 vi.mock("../src/providers/google/auth.js", async (importOriginal) => ({

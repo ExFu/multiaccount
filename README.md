@@ -12,12 +12,15 @@ Requirements: Node.js and npm.
 ```sh
 npm install
 npm run build
+npm run bundle
 ```
+
+`npm run bundle` refreshes the self-contained files shipped with the plugin.
 
 ## Create a Google OAuth client
 
 1. Open the Google Cloud Console and select or create a project.
-2. Enable the Gmail, Google Drive, and Google Calendar APIs.
+2. Enable the Gmail, Google Drive, Google Docs, and Google Calendar APIs.
 3. Configure the OAuth consent screen for your use.
 4. Create an OAuth client ID with application type **Desktop app**.
 5. Download the client-secret JSON file to a private local location.
@@ -95,12 +98,23 @@ After building, add this server to your Claude Code MCP configuration:
     "exfu-multiaccount": {
       "command": "node",
       "args": [
-        "/Users/al/Studio/projects/exfu-multiaccount/dist/index.js"
+        "<path-to-checkout>/dist/index.js"
       ]
     }
   }
 }
 ```
+
+## Install as a plugin
+
+Install the beta plugin from the ExFu marketplace:
+
+```text
+/plugin install exfu-multiaccount@exfu-marketplace
+```
+
+See [the plugin README](plugins/exfu-multiaccount/README.md) for requirements,
+setup, the complete tool list, and beta status.
 
 Restart Claude Code, then use these tools:
 

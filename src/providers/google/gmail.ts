@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
-import { google, type Auth, type gmail_v1 } from "googleapis";
+import { gmail as gmailApi, type gmail_v1 } from "@googleapis/gmail";
+import type { OAuth2Client } from "google-auth-library";
 import { extractText, isTextExtractable } from "./attachmentText.js";
 
 const BASE64_LIMIT_BYTES = 1_048_576;
@@ -132,8 +133,11 @@ export interface DeletedGmailDraft {
   deleted: true;
 }
 
-function gmailClient(client: Auth.OAuth2Client): gmail_v1.Gmail {
-  return google.gmail({ version: "v1", auth: client });
+function gmailClient(client: OAuth2Client): gmail_v1.Gmail {
+  return gmailApi({
+    version: "v1",
+    auth: client as unknown as gmail_v1.Options["auth"],
+  });
 }
 
 function headers(payload?: gmail_v1.Schema$MessagePart): Record<string, string> {
@@ -315,7 +319,7 @@ function messageMetadata(message: gmail_v1.Schema$Message): GmailSearchResult {
 }
 
 export async function searchMessages(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   query: string,
   maxResults: number,
   options: GmailSearchOptions = {},
@@ -353,7 +357,7 @@ export async function searchMessages(
 }
 
 export async function getMessage(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   id: string,
   options: GmailMessageOptions = {},
 ): Promise<GmailMessage> {
@@ -414,7 +418,7 @@ async function fetchAttachmentBytes(
 }
 
 export async function searchAttachments(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   input: GmailAttachmentSearchInput,
 ): Promise<GmailAttachmentRow[]> {
   const gmail = gmailClient(client);
@@ -487,7 +491,7 @@ function safeFilename(candidate: string, attachmentId: string): string {
 }
 
 export async function getAttachment(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   input: GmailAttachmentInput,
 ): Promise<Record<string, unknown>> {
   const gmail = gmailClient(client);
@@ -565,7 +569,7 @@ export async function getAttachment(
   return { ...common, mode: "base64", data: bytes.toString("base64") };
 }
 
-export async function getProfileEmail(client: Auth.OAuth2Client): Promise<string> {
+export async function getProfileEmail(client: OAuth2Client): Promise<string> {
   const response = await gmailClient(client).users.getProfile({ userId: "me" });
   if (!response.data.emailAddress) {
     throw new Error("Google did not return an email address for the authorized account.");
@@ -651,7 +655,7 @@ function attachmentFilenameHeader(filename: string): string {
 }
 
 export async function createDraft(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   input: GmailDraftInput,
 ): Promise<GmailDraft> {
   const attachments = await loadDraftAttachments(input.attachments ?? []);
@@ -750,7 +754,7 @@ export async function createDraft(
 }
 
 export async function deleteDraft(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   draftId: string,
 ): Promise<DeletedGmailDraft> {
   await gmailClient(client).users.drafts.delete({ userId: "me", id: draftId });

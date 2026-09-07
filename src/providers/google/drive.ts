@@ -1,4 +1,5 @@
-import { google, type Auth, type drive_v3 } from "googleapis";
+import { drive as driveApi, type drive_v3 } from "@googleapis/drive";
+import type { OAuth2Client } from "google-auth-library";
 
 const CONTENT_LIMIT_BYTES = 262_144;
 
@@ -53,8 +54,11 @@ export interface TrashedDriveFile {
   trashed: true;
 }
 
-function driveClient(client: Auth.OAuth2Client): drive_v3.Drive {
-  return google.drive({ version: "v3", auth: client });
+function driveClient(client: OAuth2Client): drive_v3.Drive {
+  return driveApi({
+    version: "v3",
+    auth: client as unknown as drive_v3.Options["auth"],
+  });
 }
 
 function responseBytes(data: unknown): Buffer {
@@ -83,7 +87,7 @@ function contentResult(data: unknown): Pick<DriveFile, "body" | "truncated" | "n
 }
 
 export async function searchFiles(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   query: string,
   maxResults: number,
 ): Promise<DriveSearchResult[]> {
@@ -106,7 +110,7 @@ export async function searchFiles(
 }
 
 export async function readFile(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   fileId: string,
 ): Promise<DriveFile> {
   const drive = driveClient(client);
@@ -141,7 +145,7 @@ export async function readFile(
 }
 
 export async function createFile(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   options: CreateFileOptions,
 ): Promise<CreatedDriveFile> {
   const response = await driveClient(client).files.create({
@@ -168,7 +172,7 @@ export async function createFile(
 }
 
 export async function updateFileContent(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   fileId: string,
   content: string,
   contentMimeType?: string,
@@ -210,7 +214,7 @@ export async function updateFileContent(
 }
 
 export async function trashFile(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   fileId: string,
 ): Promise<TrashedDriveFile> {
   const response = await driveClient(client).files.update({

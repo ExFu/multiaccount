@@ -1,4 +1,5 @@
-import { google, type Auth, type docs_v1 } from "googleapis";
+import { docs as docsApi, type docs_v1 } from "@googleapis/docs";
+import type { OAuth2Client } from "google-auth-library";
 
 export interface EditedDocument {
   documentId: string;
@@ -9,8 +10,11 @@ export interface ReplacedDocument extends EditedDocument {
   occurrencesChanged: number;
 }
 
-function docsClient(client: Auth.OAuth2Client): docs_v1.Docs {
-  return google.docs({ version: "v1", auth: client });
+function docsClient(client: OAuth2Client): docs_v1.Docs {
+  return docsApi({
+    version: "v1",
+    auth: client as unknown as docs_v1.Options["auth"],
+  });
 }
 
 function revisionConflict(error: unknown): boolean {
@@ -45,7 +49,7 @@ function documentResult(
 }
 
 export async function appendText(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   documentId: string,
   text: string,
 ): Promise<EditedDocument> {
@@ -75,7 +79,7 @@ export async function appendText(
 }
 
 export async function replaceText(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   documentId: string,
   find: string,
   replaceWith: string,

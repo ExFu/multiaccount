@@ -1,4 +1,5 @@
-import { google, type Auth, type calendar_v3 } from "googleapis";
+import { calendar as calendarApi, type calendar_v3 } from "@googleapis/calendar";
+import type { OAuth2Client } from "google-auth-library";
 
 export interface CalendarEventOptions {
   timeMin?: string;
@@ -44,8 +45,11 @@ export interface DeletedCalendarEvent {
   deleted: true;
 }
 
-function calendarClient(client: Auth.OAuth2Client): calendar_v3.Calendar {
-  return google.calendar({ version: "v3", auth: client });
+function calendarClient(client: OAuth2Client): calendar_v3.Calendar {
+  return calendarApi({
+    version: "v3",
+    auth: client as unknown as calendar_v3.Options["auth"],
+  });
 }
 
 function eventTime(value: string, timeZone?: string): calendar_v3.Schema$EventDateTime {
@@ -70,7 +74,7 @@ function mappedEvent(event: calendar_v3.Schema$Event): CalendarEvent {
 }
 
 export async function listEvents(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   options: CalendarEventOptions,
 ): Promise<CalendarEvent[]> {
   const timeMin = !options.timeMin && !options.timeMax ? new Date().toISOString() : options.timeMin;
@@ -88,7 +92,7 @@ export async function listEvents(
 }
 
 export async function createEvent(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   input: CalendarEventInput,
 ): Promise<CalendarEvent> {
   const response = await calendarClient(client).events.insert({
@@ -109,7 +113,7 @@ export async function createEvent(
 }
 
 export async function updateEvent(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   eventId: string,
   patch: CalendarEventPatch,
 ): Promise<CalendarEvent> {
@@ -132,7 +136,7 @@ export async function updateEvent(
 }
 
 export async function deleteEvent(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   eventId: string,
 ): Promise<DeletedCalendarEvent> {
   await calendarClient(client).events.delete({

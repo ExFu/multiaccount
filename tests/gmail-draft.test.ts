@@ -28,8 +28,8 @@ const {
   };
 });
 
-vi.mock("googleapis", () => ({
-  google: { gmail: gmailFactory },
+vi.mock("@googleapis/gmail", () => ({
+  gmail: gmailFactory,
 }));
 
 import {

@@ -15,8 +15,8 @@ const { docsFactory, documentsBatchUpdate, documentsGet } = vi.hoisted(() => {
   };
 });
 
-vi.mock("googleapis", () => ({
-  google: { docs: docsFactory },
+vi.mock("@googleapis/docs", () => ({
+  docs: docsFactory,
 }));
 
 import { appendText, replaceText } from "../src/providers/google/docs.js";

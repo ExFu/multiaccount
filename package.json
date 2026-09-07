@@ -8,11 +8,16 @@
   },
   "scripts": {
     "build": "tsc",
+    "bundle": "npm run build && node scripts/bundle.mjs",
     "test": "vitest run"
   },
   "dependencies": {
+    "@googleapis/calendar": "^16.0.0",
+    "@googleapis/docs": "^10.0.0",
+    "@googleapis/drive": "^22.0.0",
+    "@googleapis/gmail": "^18.0.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "googleapis": "^137.1.0",
+    "google-auth-library": "^11.0.2",
     "mammoth": "^1.8.0",
     "open": "^10.2.0",
     "pdf-parse": "^1.1.1",
@@ -21,6 +26,7 @@
   "devDependencies": {
     "@types/node": "^20.19.41",
     "@types/pdf-parse": "^1.1.5",
+    "esbuild": "^0.21.5",
     "typescript": "^5.9.3",
     "vitest": "^2.1.9"
   }

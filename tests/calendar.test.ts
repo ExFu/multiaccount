@@ -11,8 +11,8 @@ const { calendarFactory, eventsList } = vi.hoisted(() => {
   };
 });
 
-vi.mock("googleapis", () => ({
-  google: { calendar: calendarFactory },
+vi.mock("@googleapis/calendar", () => ({
+  calendar: calendarFactory,
 }));
 
 import { listEvents } from "../src/providers/google/calendar.js";

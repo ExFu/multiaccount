@@ -17,8 +17,8 @@ const { driveFactory, filesExport, filesGet, filesList } = vi.hoisted(() => {
   };
 });
 
-vi.mock("googleapis", () => ({
-  google: { drive: driveFactory },
+vi.mock("@googleapis/drive", () => ({
+  drive: driveFactory,
 }));
 
 import { readFile, searchFiles } from "../src/providers/google/drive.js";

@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { google, type Auth } from "googleapis";
+import { OAuth2Client, type Credentials } from "google-auth-library";
 import open from "open";
 import { updateAccountScopes } from "../../accounts/registry.js";
 import { createTokenStore } from "../../accounts/storeFactory.js";
@@ -42,7 +42,7 @@ async function readClientDefinition(path: string): Promise<Required<ClientDefini
 }
 
 function attachTokenPersistence(
-  client: Auth.OAuth2Client,
+  client: OAuth2Client,
   alias: string,
   initialTokens: StoredTokens,
   tokenStore: TokenStore,
@@ -54,15 +54,15 @@ function attachTokenPersistence(
   });
 }
 
-function credentials(tokens: StoredTokens): Auth.Credentials {
-  return tokens as Auth.Credentials;
+function credentials(tokens: StoredTokens): Credentials {
+  return tokens as Credentials;
 }
 
 export async function authorizeGoogleAccount(
   alias: string,
   config?: ExfuConfig,
   tokenStore: TokenStore = createTokenStore(),
-): Promise<Auth.OAuth2Client> {
+): Promise<OAuth2Client> {
   const activeConfig = config ?? (await loadConfig());
   const definition = await readClientDefinition(activeConfig.googleClientSecretPath);
   const state = randomBytes(24).toString("hex");
@@ -104,7 +104,7 @@ export async function authorizeGoogleAccount(
 
   const address = server.address() as AddressInfo;
   const redirectUri = `http://127.0.0.1:${address.port}${callbackPath}`;
-  const client = new google.auth.OAuth2(
+  const client = new OAuth2Client(
     definition.client_id,
     definition.client_secret,
     redirectUri,
@@ -144,7 +144,7 @@ export async function getAuthedClient(
   alias: string,
   config?: ExfuConfig,
   tokenStore: TokenStore = createTokenStore(),
-): Promise<Auth.OAuth2Client> {
+): Promise<OAuth2Client> {
   const activeConfig = config ?? (await loadConfig());
   const definition = await readClientDefinition(activeConfig.googleClientSecretPath);
   const tokens = await tokenStore.get(alias);
@@ -152,7 +152,7 @@ export async function getAuthedClient(
     throw new Error(`Account "${alias}" needs authorization. Run add-account ${alias}.`);
   }
 
-  const client = new google.auth.OAuth2(definition.client_id, definition.client_secret);
+  const client = new OAuth2Client(definition.client_id, definition.client_secret);
   client.setCredentials(credentials(tokens));
   attachTokenPersistence(client, alias, tokens, tokenStore);
   return client;

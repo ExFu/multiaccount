@@ -1,0 +1,9 @@
+{
+  "name": "exfu-multiaccount",
+  "version": "0.1.0-beta.1",
+  "description": "BETA — ExFu multi-account Google workspace MCP server: Gmail (search, read, attachments, drafts), Drive, Docs and Calendar across several Google accounts at once, each routed by an explicit account alias. Local-only; your own OAuth client; tokens never leave your machine.",
+  "author": { "name": "exfu.ai", "email": "al@exfu.ai", "url": "https://exfu.ai" },
+  "repository": "https://github.com/ExFu/multiaccount",
+  "license": "Proprietary",
+  "keywords": ["exfu", "google", "gmail", "drive", "calendar", "multi-account", "mcp", "beta"]
+}
