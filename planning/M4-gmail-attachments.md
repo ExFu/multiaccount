@@ -68,3 +68,15 @@ and the scoping Q&A of the same session. Principles live in
   2026-09-01 carte-blanche precedent. Target-selection: M4 is the
   target milestone on acceptance. Reversible by the operator on
   reading this note.
+
+## Rulings addendum (2026-09-07, operator)
+
+The operator asked for the server to be packaged as a proper Claude Code
+plugin, following the other ExFu plugins' conventions, labelled **beta**,
+and listed in `exfu-marketplace`. A third T3 targets this milestone:
+`T3-m4-plugin-packaging` (modular Google packages, committed esbuild
+bundle, `plugins/exfu-multiaccount/` with manifest, `.mcp.json`, skill,
+licence, README). Accepted on the operator's explicit instruction in that
+session. Definition of done gains item 6: the plugin installs from the
+marketplace and its bundled server lists all 19 tools. Marketplace
+wiring (repo, pin) is orchestrator work outside the T3.
