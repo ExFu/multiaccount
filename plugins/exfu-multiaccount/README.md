@@ -5,11 +5,20 @@ and Google Calendar across several Google accounts. Every account has an
 explicit alias so Claude can act on the right account and search all accounts
 when requested. OAuth tokens stay on your machine.
 
-## Beta status
+## Beta — devs only
 
-This plugin is **Beta**. Its surface may change, and it has only had an
-operator-run real-account smoke test. Report issues at
-https://github.com/ExFu/multiaccount/issues.
+This plugin is **beta, for developers only**. It is not an install-and-go
+connector yet:
+
+- You must create your own Google Cloud OAuth desktop client and point a
+  config file at it (see Setup). The plugin never ships a shared client ID.
+- Account authorization opens a browser and listens on a localhost port, so
+  run it from Claude Code on your own machine. Sandboxed environments such as
+  Claude Cowork are untested and are not expected to complete authorization.
+- The tool surface may change between beta releases, and it has only had an
+  operator-run real-account smoke test.
+
+Report issues at https://github.com/ExFu/multiaccount/issues.
 
 ## Requirements
 
